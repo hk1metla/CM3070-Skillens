@@ -17,13 +17,17 @@ DATA_DIR = os.path.join(BASE_DIR, "data", "processed")
 RESULTS_DIR = os.path.join(BASE_DIR, "results")
 
 
-def validate_splits() -> pd.DataFrame:
+def validate_splits(out_dir: str = None) -> pd.DataFrame:
     """
     Validate data splits for temporal integrity.
-    
+
+    Args:
+        out_dir: If set, write split_validation.csv here; else use RESULTS_DIR.
+
     Returns:
         DataFrame with validation results
     """
+    save_dir = out_dir if out_dir is not None else RESULTS_DIR
     # Load splits
     train = pd.read_csv(os.path.join(DATA_DIR, "train.csv"))
     val = pd.read_csv(os.path.join(DATA_DIR, "val.csv"))
@@ -44,9 +48,9 @@ def validate_splits() -> pd.DataFrame:
     validation_results["n_new_items"] = n_new_items
     
     # Save results
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
     validation_results.to_csv(
-        os.path.join(RESULTS_DIR, "split_validation.csv"), index=False
+        os.path.join(save_dir, "split_validation.csv"), index=False
     )
     
     print("Split validation complete!")

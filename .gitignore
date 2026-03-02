@@ -13,6 +13,7 @@ build/
 
 # Large / generated data (regenerate with project scripts)
 data/processed/
+results/final/
 
 # IDE and OS
 .idea/

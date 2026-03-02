@@ -362,12 +362,20 @@ def _slice_analysis(
     return pd.DataFrame(slice_results)
 
 
-def run_comprehensive_eval(config_path: str) -> pd.DataFrame:
+def run_comprehensive_eval(config_path: str, out_dir: str = None) -> pd.DataFrame:
     """
     Run comprehensive evaluation with all models and metrics.
-    
-    This is the main evaluation function that produces research-grade results.
+
+    Args:
+        config_path: Path to experiment config YAML.
+        out_dir: If set, write all CSVs here; else use RESULTS_DIR.
+
+    Returns:
+        DataFrame of model metrics. Also writes comprehensive_metrics.csv,
+        significance_matrix.csv, and optionally fairness_metrics.csv.
     """
+    save_dir = out_dir if out_dir is not None else RESULTS_DIR
+    os.makedirs(save_dir, exist_ok=True)
     with open(config_path, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
     
@@ -577,9 +585,8 @@ def run_comprehensive_eval(config_path: str) -> pd.DataFrame:
             fairness_df_all = pd.concat(fairness_results_all, ignore_index=True)
             
             # Save fairness results
-            os.makedirs(RESULTS_DIR, exist_ok=True)
-            fairness_df_all.to_csv(os.path.join(RESULTS_DIR, "fairness_metrics.csv"), index=False)
-            print(f"Fairness metrics saved to {RESULTS_DIR}/fairness_metrics.csv")
+            fairness_df_all.to_csv(os.path.join(save_dir, "fairness_metrics.csv"), index=False)
+            print(f"Fairness metrics saved to {save_dir}/fairness_metrics.csv")
             print(f"  Evaluated {len(fairness_df_all)} model-demographic combinations")
         else:
             print("WARNING: No fairness results generated (no valid demographic groups found)")
@@ -648,17 +655,15 @@ def run_comprehensive_eval(config_path: str) -> pd.DataFrame:
         significance_df["t_significant_corrected"] = significance_df["t_pvalue_corrected"] < 0.05
         
         # Save significance matrix
-        os.makedirs(RESULTS_DIR, exist_ok=True)
-        significance_df.to_csv(os.path.join(RESULTS_DIR, "significance_matrix.csv"), index=False)
-        print(f"Statistical significance matrix saved to {RESULTS_DIR}/significance_matrix.csv")
+        significance_df.to_csv(os.path.join(save_dir, "significance_matrix.csv"), index=False)
+        print(f"Statistical significance matrix saved to {save_dir}/significance_matrix.csv")
         print(f"  Total comparisons: {len(significance_df)}")
         print(f"  Significant differences (p<0.05, Bonferroni corrected): {significance_df['t_significant_corrected'].sum()}")
     
     # Save results
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    results_df.to_csv(os.path.join(RESULTS_DIR, "comprehensive_metrics.csv"), index=False)
+    results_df.to_csv(os.path.join(save_dir, "comprehensive_metrics.csv"), index=False)
     
-    print(f"\nEvaluation complete! Results saved to {RESULTS_DIR}/comprehensive_metrics.csv")
+    print(f"\nEvaluation complete! Results saved to {save_dir}/comprehensive_metrics.csv")
     print("\nSummary:")
     print(results_df[["model", "precision_mean", "recall_mean", "ndcg_mean", "diversity_mean", "catalog_coverage"]].to_string())
     

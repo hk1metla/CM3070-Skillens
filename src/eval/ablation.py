@@ -24,26 +24,31 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 RESULTS_DIR = os.path.join(BASE_DIR, "results")
 
 
-def run_ablation_study(config_path: str) -> pd.DataFrame:
+def run_ablation_study(
+    config_path: str,
+    results_df: "pd.DataFrame" = None,
+    out_dir: str = None,
+) -> pd.DataFrame:
     """
     Run ablation study to prove component contributions.
-    
-    Tests:
-    1. Baseline: Popularity
-    2. Content-only: TF-IDF
-    3. CF-only: ItemKNN
-    4. Hybrid (equal weights)
-    5. Hybrid (content-heavy)
-    6. Hybrid (CF-heavy)
-    
+
+    Args:
+        config_path: Path to experiment config (used only if results_df is None).
+        results_df: If provided, use this instead of re-running comprehensive eval.
+        out_dir: If set, write ablation_study.csv here; else use RESULTS_DIR.
+
     Returns:
         DataFrame with ablation results
     """
+    save_dir = out_dir if out_dir is not None else RESULTS_DIR
     print("Running Ablation Study...")
     print("=" * 60)
     
-    # Run comprehensive evaluation (includes all models)
-    results = run_comprehensive_eval(config_path)
+    # Run comprehensive evaluation only if results not provided
+    if results_df is not None:
+        results = results_df
+    else:
+        results = run_comprehensive_eval(config_path, out_dir=save_dir)
     
     # Analyze component contributions
     ablation_results = []
@@ -104,14 +109,14 @@ def run_ablation_study(config_path: str) -> pd.DataFrame:
         )
     
     # Save results
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
     ablation_df.to_csv(
-        os.path.join(RESULTS_DIR, "ablation_study.csv"), index=False
+        os.path.join(save_dir, "ablation_study.csv"), index=False
     )
     
     print("\nAblation Study Results:")
     print(ablation_df.to_string())
-    print(f"\nResults saved to {RESULTS_DIR}/ablation_study.csv")
+    print(f"\nResults saved to {save_dir}/ablation_study.csv")
     
     return ablation_df
 

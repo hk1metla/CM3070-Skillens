@@ -21,19 +21,23 @@ plt.rcParams["axes.grid"] = True
 plt.rcParams["grid.alpha"] = 0.3
 
 
-def load_results():
-    """Load evaluation results."""
-    metrics_path = os.path.join(RESULTS_DIR, "comprehensive_metrics.csv")
-    significance_path = os.path.join(RESULTS_DIR, "significance_matrix.csv")
+def load_results(metrics_dir: str = None):
+    """Load evaluation results from metrics_dir or default RESULTS_DIR."""
+    base = metrics_dir if metrics_dir is not None else RESULTS_DIR
+    metrics_path = os.path.join(base, "comprehensive_metrics.csv")
+    significance_path = os.path.join(base, "significance_matrix.csv")
     
+    if not os.path.exists(metrics_path):
+        raise FileNotFoundError(f"Metrics not found: {metrics_path}")
     metrics_df = pd.read_csv(metrics_path)
     significance_df = pd.read_csv(significance_path) if os.path.exists(significance_path) else None
     
     return metrics_df, significance_df
 
 
-def plot_accuracy_metrics(metrics_df: pd.DataFrame):
+def plot_accuracy_metrics(metrics_df: pd.DataFrame, plots_dir: str = None):
     """Create bar chart comparing accuracy metrics across models."""
+    out = plots_dir if plots_dir is not None else PLOTS_DIR
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     
     metrics_to_plot = ["precision_mean", "recall_mean", "ndcg_mean"]
@@ -69,14 +73,15 @@ def plot_accuracy_metrics(metrics_df: pd.DataFrame):
                    ha="center", va="bottom", fontsize=9)
     
     plt.tight_layout()
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    plt.savefig(os.path.join(PLOTS_DIR, "accuracy_metrics_comparison.png"), dpi=300, bbox_inches="tight")
+    os.makedirs(out, exist_ok=True)
+    plt.savefig(os.path.join(out, "accuracy_metrics_comparison.png"), dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"✓ Saved accuracy metrics plot to {PLOTS_DIR}/accuracy_metrics_comparison.png")
+    print(f"✓ Saved accuracy metrics plot to {out}/accuracy_metrics_comparison.png")
 
 
-def plot_diversity_metrics(metrics_df: pd.DataFrame):
+def plot_diversity_metrics(metrics_df: pd.DataFrame, plots_dir: str = None):
     """Create bar chart comparing diversity metrics."""
+    out = plots_dir if plots_dir is not None else PLOTS_DIR
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     
     metrics_to_plot = ["diversity_mean", "novelty_mean"]
@@ -105,14 +110,15 @@ def plot_diversity_metrics(metrics_df: pd.DataFrame):
                    ha="center", va="bottom", fontsize=9)
     
     plt.tight_layout()
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    plt.savefig(os.path.join(PLOTS_DIR, "diversity_metrics_comparison.png"), dpi=300, bbox_inches="tight")
+    os.makedirs(out, exist_ok=True)
+    plt.savefig(os.path.join(out, "diversity_metrics_comparison.png"), dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"✓ Saved diversity metrics plot to {PLOTS_DIR}/diversity_metrics_comparison.png")
+    print(f"✓ Saved diversity metrics plot to {out}/diversity_metrics_comparison.png")
 
 
-def plot_significance_heatmap(significance_df: pd.DataFrame):
+def plot_significance_heatmap(significance_df: pd.DataFrame, plots_dir: str = None):
     """Create heatmap showing statistical significance."""
+    out = plots_dir if plots_dir is not None else PLOTS_DIR
     if significance_df is None or len(significance_df) == 0:
         print("⚠ No significance data available for heatmap")
         return
@@ -187,15 +193,17 @@ def plot_significance_heatmap(significance_df: pd.DataFrame):
     plt.colorbar(im, ax=ax, label="log10(p-value)")
     
     plt.tight_layout()
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    plt.savefig(os.path.join(PLOTS_DIR, "significance_heatmap.png"), dpi=300, bbox_inches="tight")
+    os.makedirs(out, exist_ok=True)
+    plt.savefig(os.path.join(out, "significance_heatmap.png"), dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"✓ Saved significance heatmap to {PLOTS_DIR}/significance_heatmap.png")
+    print(f"✓ Saved significance heatmap to {out}/significance_heatmap.png")
 
 
-def plot_fairness_comparison():
+def plot_fairness_comparison(metrics_dir: str = None, plots_dir: str = None):
     """Create fairness comparison plots if available."""
-    fairness_path = os.path.join(RESULTS_DIR, "fairness_metrics.csv")
+    base = metrics_dir if metrics_dir is not None else RESULTS_DIR
+    out = plots_dir if plots_dir is not None else PLOTS_DIR
+    fairness_path = os.path.join(base, "fairness_metrics.csv")
     
     if not os.path.exists(fairness_path):
         print("⚠ No fairness metrics available")
@@ -240,26 +248,36 @@ def plot_fairness_comparison():
         ax2.tick_params(axis="x", rotation=45)
         
         plt.tight_layout()
-        os.makedirs(PLOTS_DIR, exist_ok=True)
+        os.makedirs(out, exist_ok=True)
         safe_category = category.replace(" ", "_").replace("/", "_")
-        plt.savefig(os.path.join(PLOTS_DIR, f"fairness_{safe_category}.png"), 
+        plt.savefig(os.path.join(out, f"fairness_{safe_category}.png"), 
                    dpi=300, bbox_inches="tight")
         plt.close()
-        print(f"✓ Saved fairness plot for {category} to {PLOTS_DIR}/fairness_{safe_category}.png")
+        print(f"✓ Saved fairness plot for {category} to {out}/fairness_{safe_category}.png")
+
+
+def generate_all_plots(metrics_dir: str = None, plots_dir: str = None):
+    """
+    Generate all evaluation plots from canonical CSV outputs.
+
+    Args:
+        metrics_dir: Directory containing comprehensive_metrics.csv, significance_matrix.csv, etc.
+        plots_dir: Directory to write PNGs. If None, uses default PLOTS_DIR.
+    """
+    mdir = metrics_dir if metrics_dir is not None else RESULTS_DIR
+    pdir = plots_dir if plots_dir is not None else PLOTS_DIR
+    metrics_df, significance_df = load_results(mdir)
+    plot_accuracy_metrics(metrics_df, pdir)
+    plot_diversity_metrics(metrics_df, pdir)
+    plot_significance_heatmap(significance_df, pdir)
+    plot_fairness_comparison(metrics_dir=mdir, plots_dir=pdir)
+    print(f"\n✅ All plots saved to {pdir}/")
 
 
 def main():
-    """Generate all plots."""
+    """Generate all plots (default directories)."""
     print("Generating evaluation plots...")
-    
-    metrics_df, significance_df = load_results()
-    
-    plot_accuracy_metrics(metrics_df)
-    plot_diversity_metrics(metrics_df)
-    plot_significance_heatmap(significance_df)
-    plot_fairness_comparison()
-    
-    print(f"\n✅ All plots saved to {PLOTS_DIR}/")
+    generate_all_plots()
 
 
 if __name__ == "__main__":
