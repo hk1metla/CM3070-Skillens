@@ -14,6 +14,8 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 DATA_PATH = os.path.join(BASE_DIR, "data", "processed", "items.csv")
+# Bundled subset for Streamlit Cloud / clones without running --prepare-data (see data/deploy/README.md)
+DEPLOY_ITEMS_PATH = os.path.join(BASE_DIR, "data", "deploy", "items.csv")
 LOG_PATH = os.path.join(BASE_DIR, "results", "logs", "feedback.csv")
 MODEL_PATH = os.path.join(BASE_DIR, "results", "logs", "selected_model.txt")
 
@@ -34,9 +36,20 @@ def is_oulad_item(item_id: str) -> bool:
     return str(item_id).startswith("oulad_")
 
 
+def _resolve_items_csv_path() -> str:
+    """Prefer local pipeline output; fall back to repo-bundled demo data (e.g. Streamlit Cloud)."""
+    if os.path.exists(DATA_PATH):
+        return DATA_PATH
+    if os.path.exists(DEPLOY_ITEMS_PATH):
+        return DEPLOY_ITEMS_PATH
+    raise FileNotFoundError(
+        f"items.csv not found. Expected {DATA_PATH} (after --prepare-data) or {DEPLOY_ITEMS_PATH}."
+    )
+
+
 def load_items() -> pd.DataFrame:
     """Load items with caching to avoid repeated disk reads."""
-    return pd.read_csv(DATA_PATH)
+    return pd.read_csv(_resolve_items_csv_path())
 
 
 @st.cache_resource(show_spinner=False)
@@ -69,9 +82,12 @@ def load_semantic_model(items: pd.DataFrame):
 @st.cache_data(show_spinner=False)
 def load_interactions() -> pd.DataFrame:
     """Load interaction data for hybrid model with caching."""
-    interactions_path = os.path.join(BASE_DIR, "data", "processed", "train.csv")
-    if os.path.exists(interactions_path):
-        return pd.read_csv(interactions_path)
+    for interactions_path in (
+        os.path.join(BASE_DIR, "data", "processed", "train.csv"),
+        os.path.join(BASE_DIR, "data", "deploy", "train.csv"),
+    ):
+        if os.path.exists(interactions_path):
+            return pd.read_csv(interactions_path)
     return pd.DataFrame()
 
 

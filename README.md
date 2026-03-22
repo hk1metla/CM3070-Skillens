@@ -30,6 +30,12 @@ python -m src.eval.pipeline --config configs/experiment.yaml --out results/final
 streamlit run src/app/app.py
 ```
 
+## Streamlit Community Cloud
+
+- **Main file path:** `src/app/app.py`
+- **Data:** The repo includes **`data/deploy/`** (`items.csv` + sample `train.csv`) so the app starts without OULAD on the server. For full fidelity, run `--prepare-data` locally and use those outputs (not committed).
+
+
 ## Expected Outputs
 
 | File | Report Reference |
