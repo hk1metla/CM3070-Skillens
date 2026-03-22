@@ -7,7 +7,7 @@ Accessible via ?page=control (not shown in navbar).
 
 import os
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
@@ -19,14 +19,25 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 RESULTS_DIR = os.path.join(BASE_DIR, "results")
+RESULTS_FINAL_DIR = os.path.join(BASE_DIR, "results", "final")
+DEPLOY_DIR = os.path.join(BASE_DIR, "data", "deploy")
 DATA_DIR = os.path.join(BASE_DIR, "data", "processed")
 LOG_PATH = os.path.join(RESULTS_DIR, "logs", "feedback.csv")
 
 
+def _resolve_results_csv(filename: str) -> Optional[str]:
+    """Pipeline writes to results/final/; legacy path was results/; Cloud bundles data/deploy/."""
+    for directory in (RESULTS_FINAL_DIR, RESULTS_DIR, DEPLOY_DIR):
+        path = os.path.join(directory, filename)
+        if os.path.exists(path):
+            return path
+    return None
+
+
 def load_evaluation_results() -> pd.DataFrame:
     """Load comprehensive evaluation results."""
-    results_path = os.path.join(RESULTS_DIR, "comprehensive_metrics.csv")
-    if os.path.exists(results_path):
+    results_path = _resolve_results_csv("comprehensive_metrics.csv")
+    if results_path:
         return pd.read_csv(results_path)
     return pd.DataFrame()
 
@@ -40,8 +51,8 @@ def load_feedback_logs() -> pd.DataFrame:
 
 def load_ablation_results() -> pd.DataFrame:
     """Load ablation study results."""
-    ablation_path = os.path.join(RESULTS_DIR, "ablation_study.csv")
-    if os.path.exists(ablation_path):
+    ablation_path = _resolve_results_csv("ablation_study.csv")
+    if ablation_path:
         return pd.read_csv(ablation_path)
     return pd.DataFrame()
 
@@ -168,8 +179,15 @@ def render_model_performance() -> None:
     results = load_evaluation_results()
     
     if results.empty:
-        st.warning("No evaluation results found. Run evaluation first.")
-        st.code("python -m src.eval.comprehensive_eval --config configs/experiment.yaml")
+        st.warning("No evaluation results found.")
+        st.markdown(
+            "The Control Room reads **`comprehensive_metrics.csv`** from `results/final/`, `results/`, or **`data/deploy/`** (bundled for Streamlit Cloud)."
+        )
+        st.markdown("**Locally**, run the full pipeline:")
+        st.code(
+            "python -m src.eval.pipeline --config configs/experiment.yaml --out results/final",
+            language="bash",
+        )
         return
     
     # Key metrics
@@ -259,6 +277,9 @@ def render_evaluation_metrics() -> None:
     
     if results.empty:
         st.warning("No evaluation results found.")
+        st.caption(
+            "Add `data/deploy/comprehensive_metrics.csv` to the repo (from local `results/final/`) or run the pipeline locally."
+        )
         return
     
     # Diversity vs Accuracy trade-off
@@ -427,8 +448,13 @@ def render_ablation_study() -> None:
     ablation_df = load_ablation_results()
     
     if ablation_df.empty:
-        st.warning("No ablation study results found. Run ablation study first.")
-        st.code("python -m src.eval.ablation --config configs/experiment.yaml")
+        st.warning("No ablation study results found.")
+        st.markdown("Expected file: **`ablation_study.csv`** in `results/final/`, `results/`, or **`data/deploy/`**.")
+        st.markdown("**Locally**, run:")
+        st.code(
+            "python -m src.eval.pipeline --config configs/experiment.yaml --out results/final",
+            language="bash",
+        )
         return
     
     # Improvement visualization
@@ -560,13 +586,15 @@ def render_system_status() -> None:
     # File existence checks (Third)
     st.subheader("Data & Results Files")
     
+    _cm = _resolve_results_csv("comprehensive_metrics.csv")
+    _ab = _resolve_results_csv("ablation_study.csv")
     files_to_check = {
         "Items Data": os.path.join(DATA_DIR, "items.csv"),
         "Interactions": os.path.join(DATA_DIR, "interactions.csv"),
         "Train Split": os.path.join(DATA_DIR, "train.csv"),
         "Test Split": os.path.join(DATA_DIR, "test.csv"),
-        "Evaluation Results": os.path.join(RESULTS_DIR, "comprehensive_metrics.csv"),
-        "Ablation Study": os.path.join(RESULTS_DIR, "ablation_study.csv"),
+        "Evaluation Results": _cm or os.path.join(RESULTS_FINAL_DIR, "comprehensive_metrics.csv"),
+        "Ablation Study": _ab or os.path.join(RESULTS_FINAL_DIR, "ablation_study.csv"),
         "Feedback Logs": LOG_PATH,
     }
     
