@@ -110,6 +110,7 @@ def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False) -> 
         - comprehensive_metrics.csv
         - significance_matrix.csv
         - fairness_metrics.csv (if demographics available)
+        - fairness_accuracy.csv (if demographics available)
         - ablation_study.csv
         - split_validation.csv
         - plots/*.png
@@ -159,6 +160,22 @@ def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False) -> 
     from src.eval.comprehensive_eval import run_comprehensive_eval
     results_df = run_comprehensive_eval(config_path, out_dir=out_dir)
     print()
+
+    # 2b. Fairness accuracy by demographic group (Hybrid model)
+    try:
+        from src.eval.fairness_accuracy import run_fairness_accuracy
+
+        run_fairness_accuracy(
+            out_dir=out_dir,
+            k=10,
+            max_users_per_group=500,
+            seed=42,
+            n_bootstrap=500,
+        )
+        print()
+    except Exception as e:
+        print(f"WARNING: Fairness accuracy-by-group was not generated: {e}")
+        print()
 
     # 3. Ablation study (reuses results_df, writes ablation_study.csv)
     from src.eval.ablation import run_ablation_study
