@@ -20,7 +20,7 @@ class HybridRecommender:
     Score fusion formula:
     score = w_content * content_score + w_cf * cf_score
     
-    Weights are tuned on validation set to optimize performance.
+    The reported baseline fixes the content and collaborative weights at 0.6 and 0.4.
     """
 
     def __init__(

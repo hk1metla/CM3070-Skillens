@@ -28,6 +28,7 @@ def generate_coldstart_plot():
     df = pd.read_csv(CSV_PATH)
     df = df[df["n_users"] > 0]
 
+    df["bin"] = pd.Categorical(df["bin"], categories=["1-5", "6-20", "21+"], ordered=True)
     hybrid_df = df[df["model"] == "hybrid"].sort_values("bin")
     tfidf_df = df[df["model"] == "tfidf"].sort_values("bin")
 

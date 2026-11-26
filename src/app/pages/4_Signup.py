@@ -1,14 +1,4 @@
-import streamlit as st
-
-from src.app.ui import inject_css, render_nav
-from src.app.views import render_signup
-
-
-def main() -> None:
-    inject_css()
-    render_nav()
-    render_signup()
-
+from src.app.views import render_login
 
 if __name__ == "__main__":
-    main()
+    render_login()

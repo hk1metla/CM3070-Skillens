@@ -674,9 +674,8 @@ def render_nav(active_route: str) -> None:
             <div class="nav-links">
                 <a class="{active['home']}" href="?page=home" target="_self">Home</a>
                 <a class="{active['explore']}" href="?page=explore" target="_self">Explore</a>
-                <a class="{active['signup']}" href="?page=signup" target="_self">Sign Up</a>
             </div>
-            <a class="nav-login" href="?page=login" target="_self">Login</a>
+            <a class="nav-login" href="?page=login" target="_self">Guest session</a>
         </div>
         """,
         unsafe_allow_html=True,

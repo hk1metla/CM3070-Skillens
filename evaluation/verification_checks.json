@@ -1,0 +1,9 @@
+{
+  "split_total_equals_mapped_rows": true,
+  "per_user_relative_day_nondecreasing": true,
+  "all_metrics_bounded": true,
+  "common_unseen_excludes_history": true,
+  "aligned_model_user_sets": true,
+  "integer_history_string_query_returns_empty": true,
+  "knn_parameter_unused_for_neighbor_truncation": true
+}

@@ -10,6 +10,8 @@ Usage:
 """
 
 import argparse
+import hashlib
+from pathlib import Path
 import json
 import os
 import subprocess
@@ -32,16 +34,34 @@ def _data_ready() -> bool:
     return True
 
 
-def _run_data_pipeline() -> None:
+def _fingerprints():
+    files = {}
+    for name in REQUIRED_DATA_FILES:
+        h = hashlib.sha256()
+        with open(os.path.join(DATA_PROCESSED, name), "rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                h.update(chunk)
+        files[name] = h.hexdigest()
+    return files
+
+
+def _run_data_pipeline(data_mode) -> None:
     """Run ingest -> build_interactions -> make_splits to create data/processed."""
     os.makedirs(DATA_PROCESSED, exist_ok=True)
     print("Running data pipeline: ingest -> build_interactions -> make_splits ...")
     from src.data.ingest import ingest
+    if data_mode == "oulad":
+        for name in ("courses.csv", "vle.csv", "studentVle.csv"):
+            if not (Path(BASE_DIR) / "data" / "raw" / "oulad" / name).is_file():
+                raise FileNotFoundError(f"Missing OULAD input {name}. Supply the data or use --data-mode synthetic.")
+    marker = Path(DATA_PROCESSED) / "input_mode.json"
+    marker.unlink(missing_ok=True)
     ingest()
     from src.data.build_interactions import build_interactions
-    build_interactions()
+    build_interactions(data_mode=data_mode)
     from src.data.make_splits import make_splits
     make_splits()
+    marker.write_text(json.dumps({"data_mode": data_mode, "sha256": _fingerprints()}, indent=2))
     print("Data pipeline complete.")
     print()
 
@@ -61,10 +81,11 @@ def _git_hash():
         return "unknown"
 
 
-def _write_run_manifest(out_dir: str, config_path: str, command_line: list) -> None:
+def _write_run_manifest(out_dir: str, config_path: str, command_line: list, data_mode: str) -> None:
     """Write run_manifest.json with git hash, config, timestamps, versions."""
     manifest = {
         "git_commit": _git_hash(),
+        "data_mode": data_mode,
         "config_path": os.path.abspath(config_path) if config_path else None,
         "command_line": command_line,
         "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -102,7 +123,7 @@ def _write_run_manifest(out_dir: str, config_path: str, command_line: list) -> N
     print(f"Run manifest written to {path}")
 
 
-def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False) -> None:
+def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False, data_mode: str = "oulad") -> None:
     """
     Run the full canonical evaluation pipeline.
 
@@ -117,7 +138,7 @@ def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False) -> 
         - run_manifest.json
     """
     if prepare_data:
-        _run_data_pipeline()
+        _run_data_pipeline(data_mode)
     if not _data_ready():
         missing = []
         for f in REQUIRED_DATA_FILES:
@@ -137,11 +158,17 @@ def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False) -> 
         print("     python -m src.data.make_splits")
         sys.exit(1)
 
+    marker = Path(DATA_PROCESSED) / "input_mode.json"
+    if not marker.is_file():
+        raise ValueError("Prepared data has no source record. Run again with --prepare-data and the intended --data-mode.")
+    provenance = json.loads(marker.read_text())
+    if provenance.get("data_mode") != data_mode or provenance.get("sha256") != _fingerprints():
+        raise ValueError("Prepared files differ from the selected source. Rebuild with --prepare-data.")
     os.makedirs(out_dir, exist_ok=True)
     plots_dir = os.path.join(out_dir, "plots")
     os.makedirs(plots_dir, exist_ok=True)
 
-    cmd = [sys.executable, "-m", "src.eval.pipeline", "--config", config_path, "--out", out_dir]
+    cmd = [sys.executable, "-m", "src.eval.pipeline", "--config", config_path, "--out", out_dir, "--data-mode", data_mode]
     if prepare_data:
         cmd.append("--prepare-data")
     print("=" * 60)
@@ -188,7 +215,7 @@ def run_pipeline(config_path: str, out_dir: str, prepare_data: bool = False) -> 
     print()
 
     # 5. Run manifest
-    _write_run_manifest(out_dir, config_path, cmd)
+    _write_run_manifest(out_dir, config_path, cmd, data_mode)
     print()
     print("Pipeline complete. All artifacts in:", out_dir)
 
@@ -212,8 +239,9 @@ def main():
         action="store_true",
         help="Run ingest, build_interactions, make_splits first if data/processed is missing",
     )
+    parser.add_argument("--data-mode", choices=["oulad", "synthetic"], default="oulad")
     args = parser.parse_args()
-    run_pipeline(args.config, args.out, prepare_data=args.prepare_data)
+    run_pipeline(args.config, args.out, prepare_data=args.prepare_data, data_mode=args.data_mode)
 
 
 if __name__ == "__main__":

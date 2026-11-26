@@ -16,12 +16,6 @@ if BASE_DIR not in sys.path:
 DATA_PATH = os.path.join(BASE_DIR, "data", "processed", "items.csv")
 DEPLOY_ITEMS_PATH = os.path.join(BASE_DIR, "data", "deploy", "items.csv")
 
-# FIX (Issue 1): Path changed from results/logs/feedback.csv to data/feedback/feedback.csv
-# to match report §3.6: "Feedback is logged to a CSV file under data/feedback/
-# to keep evaluation runs separate from interactive usage."
-LOG_PATH = os.path.join(BASE_DIR, "data", "feedback", "feedback.csv")
-
-MODEL_PATH = os.path.join(BASE_DIR, "results", "logs", "selected_model.txt")
 
 
 def is_oulad_item(item_id: str) -> bool:
@@ -138,28 +132,13 @@ def log_feedback(
     event_type: str = "feedback",
     time_spent: Optional[float] = None,
 ) -> None:
-    """Log user feedback to data/feedback/feedback.csv (report §3.6)."""
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    record = pd.DataFrame(
-        [
-            {
-                "timestamp": datetime.utcnow().isoformat(),
-                "goal_text": goal,
-                "item_id": item_id,
-                "feedback": feedback,
-                "model_used": model_used,
-                "returned_item_ids": (
-                    ",".join(returned_item_ids) if returned_item_ids else ""
-                ),
-                "event_type": event_type,
-                "time_spent": time_spent if time_spent is not None else "",
-            }
-        ]
-    )
-    if os.path.exists(LOG_PATH):
-        record.to_csv(LOG_PATH, mode="a", header=False, index=False)
-    else:
-        record.to_csv(LOG_PATH, index=False)
+    """Keep demo feedback in the current browser session."""
+    records = st.session_state.setdefault("feedback_records", [])
+    records.append({
+        "timestamp": datetime.utcnow().isoformat(), "item_id": item_id,
+        "feedback": feedback, "model_used": model_used, "event_type": event_type,
+        "time_spent": time_spent,
+    })
 
 
 def log_click(
@@ -209,29 +188,9 @@ def clear_active_user() -> None:
     st.session_state.pop("active_user", None)
 
 
-def get_selected_model(default: str = "tfidf") -> str:
-    """Get the globally selected model, persisted across pages."""
-    if "selected_model" in st.session_state:
-        return st.session_state["selected_model"]
-    if os.path.exists(MODEL_PATH):
-        try:
-            with open(MODEL_PATH, "r", encoding="utf-8") as fh:
-                value = fh.read().strip()
-            if value:
-                st.session_state["selected_model"] = value
-                return value
-        except OSError:
-            pass
-    st.session_state["selected_model"] = default
-    return default
+def get_selected_model(default: str = "hybrid") -> str:
+    return st.session_state.get("selected_model", default)
 
 
 def set_selected_model(model_key: str) -> None:
-    """Persist the globally selected model to disk and session state."""
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    try:
-        with open(MODEL_PATH, "w", encoding="utf-8") as fh:
-            fh.write(model_key)
-    except OSError:
-        pass
     st.session_state["selected_model"] = model_key

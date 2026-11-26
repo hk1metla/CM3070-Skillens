@@ -524,7 +524,7 @@ def run_comprehensive_eval(config_path: str, out_dir: str = None) -> pd.DataFram
                     
                     # Sample up to 500 users per group for efficiency (fairness evaluation)
                     sample_size = min(500, len(group_test_users))
-                    sampled_users = np.random.choice(group_test_users, size=sample_size, replace=False)
+                    sampled_users = np.random.default_rng(42).choice(sorted(group_test_users), size=sample_size, replace=False)
                     
                     for user_id in sampled_users:
                         user_test = test_df[test_df["user_id"] == user_id]

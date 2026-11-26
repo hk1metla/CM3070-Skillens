@@ -70,11 +70,17 @@ def _build_oulad_interactions() -> pd.DataFrame:
     return pd.DataFrame()
 
 
-def build_interactions(seed: int = 42) -> pd.DataFrame:
-    if os.path.exists(os.path.join(OULAD_DIR, "studentVle.csv")):
+def build_interactions(seed: int = 42, data_mode: str = "oulad") -> pd.DataFrame:
+    if data_mode not in ("oulad", "synthetic"):
+        raise ValueError("data_mode must be oulad or synthetic")
+    if data_mode == "oulad":
+        for filename in ("courses.csv", "vle.csv", "studentVle.csv"):
+            if not os.path.isfile(os.path.join(OULAD_DIR, filename)):
+                raise FileNotFoundError(f"Missing OULAD input {filename} in {OULAD_DIR}. Use --data-mode synthetic for a fixture.")
         interactions = _build_oulad_interactions()
         if not interactions.empty:
             return interactions
+        raise ValueError("No mapped OULAD activity rows were found.")
 
     items = pd.read_csv(ITEMS_PATH)
 
@@ -107,5 +113,8 @@ def build_interactions(seed: int = 42) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    build_interactions()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-mode", choices=["oulad", "synthetic"], default="oulad")
+    build_interactions(data_mode=parser.parse_args().data_mode)
 

@@ -1,0 +1,24 @@
+{
+  "raw_rows": 10655280,
+  "raw_sum_click": 39605099,
+  "mapped_rows": 10655280,
+  "users": 26074,
+  "items": 22,
+  "test_users": 25797,
+  "eligible_users": 43,
+  "eligible_fraction_of_test": 0.001666860487653603,
+  "split_sizes": {
+    "train": 6382979,
+    "validation": 2130988,
+    "test": 2141313
+  },
+  "relative_day_boundary_violations": 0,
+  "tied_user_split_boundaries": 41844,
+  "n_zero_train_test_users": 0,
+  "n_relevant_distribution": {
+    "1": 43
+  },
+  "tfidf_vocabulary_size": 124,
+  "train_unique_pairs": 29179,
+  "train_matrix_sparsity": 0.9491325388579358
+}

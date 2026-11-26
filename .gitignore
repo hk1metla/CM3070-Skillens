@@ -38,3 +38,8 @@ latex_documentation
 data/raw/
 anonymisedData/
 "anonymisedData 2/"
+
+# Local interaction data and runtime preferences
+/results/logs/
+/data/feedback/
+/audit-local/

@@ -1,3 +1,4 @@
+# Test-set sensitivity analysis. These sweeps do not select the reported fusion weights.
 """
 Robustness sweeps for Skillens evaluation.
 

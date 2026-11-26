@@ -1,7 +1,5 @@
-# Project provenance
+# Project history
 
-Skillens was developed by Shahzaib Naeem as the CM3070 Computer Science final project at the University of London, using the CM3005 Data Science template. The public presentation now uses the project name and its technical purpose.
+Shahzaib Naeem developed Skillens for his University of London computer science degree. The early evaluation work included a February 2026 full-data run. Its historical output reflects an earlier configuration. The November reproduction below records the public implementation, input archive and candidate policies used for the current figures.
 
-The November 2026 portfolio update reorganizes documentation and adds a visual project guide. It does not retrain the models or establish new benchmark results. Older README content is retained in docs/HISTORICAL_README.md. Data modes, candidate sets and preprocessing must be verified before citing numerical outcomes.
-
-OULAD, external course metadata, libraries and any incorporated framework code retain their own authorship and terms. AI assistance was used for portfolio preparation.
+The archived [original README](docs/HISTORICAL_README.md) describes the earlier project. For reported numbers use the [reproduction guide and tables](evaluation/README.md). The interactive catalogue has a separate purpose and source from the OULAD evaluation. OULAD, external metadata and software dependencies retain their respective attributions and terms. AI assistance was used in preparing the public documentation and verification updates.

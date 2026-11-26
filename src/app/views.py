@@ -136,7 +136,7 @@ def render_home() -> None:
         <div class="section-header">
             <div class="section-eyebrow">RESULTS</div>
             <div class="section-title-lg">Evaluation results</div>
-            <div class="section-subtitle">Offline evaluation on OULAD (26,074 learners, 22 module-presentations, K=10).</div>
+            <div class="section-subtitle">OULAD contains 26,074 learners. Only 43 had a test module-presentation absent from their training history. Each had one eligible item.</div>
             <div class="section-divider"></div>
         </div>
         """,
@@ -146,7 +146,7 @@ def render_home() -> None:
     # actual evidenced numbers from the report (Table 10).
     stats_content = [
         ("0.703", "Hybrid NDCG@10"),
-        ("+83%", "vs popularity baseline"),
+        ("43", "Evaluated learners"),
         ("0.574", "ItemKNN NDCG@10"),
     ]
     for col, (value, label) in zip(st.columns(3), stats_content):
@@ -207,7 +207,7 @@ def render_home() -> None:
                 <div class="footer-links">
                     <a href="?page=home" target="_self">Home</a>
                     <a href="?page=explore" target="_self">Explore</a>
-                    <a href="?page=login" target="_self">Login</a>
+                    <a href="?page=login" target="_self">Guest session</a>
                 </div>
             </div>
         </div>
@@ -320,9 +320,9 @@ def render_recommendations() -> None:
             "itemknn":  "ItemKNN (collaborative)",
             "semantic": "Semantic (Sentence-BERT)",
         }[x],
-        index=0,
+        index=["hybrid", "tfidf", "itemknn", "semantic"].index(get_selected_model()),
         horizontal=True,
-        help="Hybrid is the default and best-performing model (NDCG@10 = 0.703). "
+        help="Hybrid combines text and collaborative signals. "
              "Other models are available for comparison.",
     )
 
@@ -337,7 +337,7 @@ def render_recommendations() -> None:
             "(report §4.4.3). In this UI, no stored user history is available, so recommendations "
             "are ranked by collaborative centrality: items most widely co-engaged across the "
             "OULAD learner population appear first. The offline evaluation results (NDCG@10 = 0.574) "
-            "reflect the history-based mode.",
+            "reflect the history-based mode for 43 eligible learners.",
             icon="\u2139\ufe0f",
         )
 
@@ -487,136 +487,22 @@ def render_recommendations() -> None:
 
 def render_login() -> None:
     st.markdown(_PAGE_OFFSET_CSS, unsafe_allow_html=True)
-    active_user = st.session_state.get("active_user")
-    _, center, _ = st.columns([1, 1.2, 1])
-    with center:
-        st.markdown(
-            """
-            <div class="auth-header">
-                <span class="auth-brand">Skillens</span>
-                <a class="auth-back" href="?page=home" target="_self">\u2190 Back to Home</a>
-            </div>
-            <div class="auth-title auth-center">Welcome back</div>
-            <div class="auth-subtitle auth-center">Sign in to continue your session.</div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.header("Guest session")
+    st.write("Explore the catalogue directly, or choose a display name for this browser session.")
+    name = st.session_state.get("active_user")
+    if name:
+        st.write("Current display name:", name)
+        if st.button("End guest session"):
+            st.session_state.pop("active_user", None)
+            st.rerun()
+    else:
+        with st.form("guest_session"):
+            alias = st.text_input("Display name", max_chars=40, placeholder="Guest")
+            if st.form_submit_button("Start guest session"):
+                st.session_state["active_user"] = alias.strip() or "Guest"
+                st.rerun()
+    st.markdown("[Explore recommendations](?page=explore)")
 
-        # FIX Issue 3: add explicit demo-only note for login
-        st.caption(
-            "\U0001f6a7  Demo prototype: authentication is session-based only. "
-            "No real user database is used. Closing the browser tab ends the session."
-        )
-
-        if active_user:
-            st.success(f"Signed in as {active_user}.")
-            if st.button("Sign out"):
-                st.session_state.pop("active_user", None)
-            return
-
-        with st.form("login_form"):
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Sign in")
-
-        if submitted:
-            if not email or not password:
-                st.warning("Please enter both email and password.")
-            else:
-                st.session_state["active_user"] = email
-                st.success("Signed in. Head to Explore to get started.")
-
-        st.markdown(
-            """
-            <div style="margin-top:18px;font-size:14px;color:#cbd5f5;">
-                Don't have an account?
-                <a class="auth-link" href="?page=signup" target="_self">Create one</a>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SIGN UP
-# ─────────────────────────────────────────────────────────────────────────────
 
 def render_signup() -> None:
-    st.markdown(_PAGE_OFFSET_CSS, unsafe_allow_html=True)
-
-    st.markdown(
-        """
-        <style>
-        .signup-outer { max-width: 460px; margin: 2.5rem auto 0 auto; }
-        .signup-title { font-size: 1.85rem; font-weight: 700; color: #ffffff; margin: 0 0 0.3rem 0; line-height: 1.25; }
-        .signup-subtitle { font-size: 0.92rem; color: #9999bb; margin: 0 0 1.6rem 0; }
-        .signup-outer div[data-testid="stForm"] {
-            background: #12122a !important;
-            border: 1px solid #2a2a4a !important;
-            border-radius: 14px !important;
-            padding: 2rem 2rem 1.6rem 2rem !important;
-            box-shadow: none !important;
-        }
-        .signup-outer div[data-testid="stForm"] label {
-            color: #ccccdd !important; font-size: 0.86rem !important; font-weight: 500 !important;
-        }
-        .signup-outer div[data-testid="stForm"] input {
-            background: #1e1e3a !important;
-            border: 1px solid #3a3a5c !important;
-            border-radius: 8px !important;
-            color: #ffffff !important;
-        }
-        .signup-outer div[data-testid="stForm"] input:focus {
-            border-color: #5b5bdd !important;
-            box-shadow: 0 0 0 2px rgba(91,91,221,0.25) !important;
-        }
-        .signup-outer .stFormSubmitButton > button {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
-            color: #ffffff !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            font-size: 0.95rem !important;
-            width: 100% !important;
-            padding: 0.55rem 1rem !important;
-            margin-top: 0.4rem !important;
-        }
-        .signup-outer .stFormSubmitButton > button:hover { opacity: 0.87 !important; color: #ffffff !important; }
-        .signup-outer div[data-testid="stAlert"] { border-radius: 8px !important; margin-top: 0.8rem !important; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="signup-outer">', unsafe_allow_html=True)
-    st.markdown('<p class="signup-title">Create your Skillens account</p>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="signup-subtitle">Start tracking your learning goals and feedback.</p>',
-        unsafe_allow_html=True,
-    )
-
-    # FIX Issue 3: explicit demo-only disclaimer before the form
-    st.caption(
-        "\U0001f6a7  Demo prototype: account creation is session-based only "
-        "and is not part of the evaluated offline pipeline."
-    )
-
-    with st.form("signup_form"):
-        name = st.text_input("Full name", placeholder="Your name")
-        email = st.text_input("Email", placeholder="you@example.com")
-        password = st.text_input("Password", type="password", placeholder="Min 8 characters")
-        submitted = st.form_submit_button("Create account")
-
-    if submitted:
-        if not name or not email or not password:
-            st.warning("Please complete all fields.")
-        elif len(password) < 8:
-            st.warning("Password must be at least 8 characters.")
-        else:
-            st.session_state["active_user"] = email
-            st.success(
-                f"Session created for {name}. "
-                "You can now explore recommendations and submit feedback."
-            )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_login()

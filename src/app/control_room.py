@@ -22,7 +22,6 @@ RESULTS_DIR = os.path.join(BASE_DIR, "results")
 RESULTS_FINAL_DIR = os.path.join(BASE_DIR, "results", "final")
 DEPLOY_DIR = os.path.join(BASE_DIR, "data", "deploy")
 DATA_DIR = os.path.join(BASE_DIR, "data", "processed")
-LOG_PATH = os.path.join(RESULTS_DIR, "logs", "feedback.csv")
 
 
 def _resolve_results_csv(filename: str) -> Optional[str]:
@@ -43,10 +42,8 @@ def load_evaluation_results() -> pd.DataFrame:
 
 
 def load_feedback_logs() -> pd.DataFrame:
-    """Load user feedback logs."""
-    if os.path.exists(LOG_PATH):
-        return pd.read_csv(LOG_PATH)
-    return pd.DataFrame()
+    """Summarize feedback from the current browser session."""
+    return pd.DataFrame(st.session_state.get("feedback_records", []))
 
 
 def load_ablation_results() -> pd.DataFrame:
@@ -174,6 +171,7 @@ def render_control_room() -> None:
 
 def render_model_performance() -> None:
     """Render model performance comparison."""
+    st.caption("Historical ranking summaries cover 43 eligible learners and 22 module-presentations. See the repository evaluation for candidate policies and uncertainty.")
     st.header("Model Performance Comparison")
     
     results = load_evaluation_results()
@@ -271,6 +269,7 @@ def render_model_performance() -> None:
 
 def render_evaluation_metrics() -> None:
     """Render detailed evaluation metrics."""
+    st.caption("Historical ranking summaries cover 43 eligible learners and 22 module-presentations. See the repository evaluation for candidate policies and uncertainty.")
     st.header("Evaluation Metrics Analysis")
     
     results = load_evaluation_results()
@@ -443,6 +442,7 @@ def render_user_feedback() -> None:
 
 def render_ablation_study() -> None:
     """Render ablation study results."""
+    st.caption("Historical ranking summaries cover 43 eligible learners and 22 module-presentations. See the repository evaluation for candidate policies and uncertainty.")
     st.header("Ablation Study: Component Contributions")
     
     ablation_df = load_ablation_results()
@@ -532,9 +532,7 @@ def render_system_status() -> None:
                 st.metric("Unique Users", interactions_df["user_id"].nunique())
     
     with col3:
-        if os.path.exists(LOG_PATH):
-            feedback_df = pd.read_csv(LOG_PATH)
-            st.metric("Total Feedback", len(feedback_df))
+        st.metric("Session feedback", len(load_feedback_logs()))
     
     # Model Control (Second) - More prominent section
     st.markdown("---")
@@ -542,7 +540,7 @@ def render_system_status() -> None:
         """
         <div style="background: rgba(99, 102, 241, 0.15); padding: 28px; border-radius: 16px; border: 2px solid rgba(99, 102, 241, 0.4); margin: 24px 0; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);">
             <h2 style="margin-top: 0; margin-bottom: 8px; color: #818cf8; font-size: 24px;">Model Control</h2>
-            <p style="color: #cbd5e1; margin-bottom: 0; font-size: 14px;">Change the model used in the UI for all users</p>
+            <p style="color: #cbd5e1; margin-bottom: 0; font-size: 14px;">Choose the default model for this browser session</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -569,7 +567,7 @@ def render_system_status() -> None:
             "Select model for UI",
             options=list(model_options.keys()),
             index=list(model_options.values()).index(current_model) if current_model in model_options.values() else 0,
-            help="This changes the model used in the Explore page for all users.",
+            help="This sets the default model on Explore for the current browser session.",
         )
     
     with col2:
@@ -577,7 +575,7 @@ def render_system_status() -> None:
         if st.button("Apply Model", type="primary", use_container_width=True):
             new_model_key = model_options[selected_model_name]
             set_selected_model(new_model_key)
-            st.success(f"Model changed to {selected_model_name}! Users will now see recommendations from this model.")
+            st.success(f"Model changed to {selected_model_name}! The model preference applies to this session.")
             st.rerun()
     
     st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
@@ -595,7 +593,6 @@ def render_system_status() -> None:
         "Test Split": os.path.join(DATA_DIR, "test.csv"),
         "Evaluation Results": _cm or os.path.join(RESULTS_FINAL_DIR, "comprehensive_metrics.csv"),
         "Ablation Study": _ab or os.path.join(RESULTS_FINAL_DIR, "ablation_study.csv"),
-        "Feedback Logs": LOG_PATH,
     }
     
     status_df = []
