@@ -234,12 +234,9 @@ def run_fairness_accuracy(
     # First pass: compute per-group mean ndcg values, to allow reference-gap calculation.
     results: List[Dict[str, object]] = []
 
-    ndcg_means_by_category: Dict[str, float] = {}
     ndcg_mean_by_group: Dict[Tuple[str, str], float] = {}
 
     for category in reported_categories:
-        ref_raw = _ref_raw_group(category)
-
         # Evaluate all groups for this category to compute reference values.
         # We compute ndcg values list, then CI + mean.
         for raw_group in groups_to_include[category]:
@@ -253,53 +250,28 @@ def run_fairness_accuracy(
                 k=k,
             )
 
-            ndcg_values = vals["ndcg"]
-            precision_values = vals["precision"]
-            recall_values = vals["recall"]
-
-            if not ndcg_values:
-                # Skip groups with no valid evaluation users.
-                continue
-
-            ndcg_mean, ndcg_ci_lower, ndcg_ci_upper = bootstrap_confidence_interval(
-                ndcg_values,
-                confidence=0.95,
-                n_bootstrap=n_bootstrap,
-                random_seed=seed,
-            )
-            precision_mean, precision_ci_lower, precision_ci_upper = bootstrap_confidence_interval(
-                precision_values,
-                confidence=0.95,
-                n_bootstrap=n_bootstrap,
-                random_seed=seed,
-            )
-            recall_mean, recall_ci_lower, recall_ci_upper = bootstrap_confidence_interval(
-                recall_values,
-                confidence=0.95,
-                n_bootstrap=n_bootstrap,
-                random_seed=seed,
-            )
-
-            ndcg_mean_by_group[(category, raw_group)] = ndcg_mean
-
-            results.append(
-                {
-                    "demographic_category": category,
-                    "group": _pretty_label(category, raw_group),
-                    "raw_group": raw_group,
-                    "model": "hybrid",
-                    "n_users": len(ndcg_values),
-                    "precision_mean": precision_mean,
-                    "precision_ci_lower": precision_ci_lower,
-                    "precision_ci_upper": precision_ci_upper,
-                    "recall_mean": recall_mean,
-                    "recall_ci_lower": recall_ci_lower,
-                    "recall_ci_upper": recall_ci_upper,
-                    "ndcg_mean": ndcg_mean,
-                    "ndcg_ci_lower": ndcg_ci_lower,
-                    "ndcg_ci_upper": ndcg_ci_upper,
-                }
-            )
+            n = len(vals["ndcg"])
+            row = {
+                "demographic_category": category,
+                "group": _pretty_label(category, raw_group),
+                "raw_group": raw_group,
+                "model": "hybrid",
+                "n_sampled": len(user_ids),
+                "n_users": n,
+                "estimate_status": "reported" if n >= 30 else "insufficient_support",
+            }
+            for metric in ("precision", "recall", "ndcg"):
+                if n >= 30:
+                    mean, lower, upper = bootstrap_confidence_interval(
+                        vals[metric], confidence=0.95, n_bootstrap=n_bootstrap, random_seed=seed
+                    )
+                else:
+                    mean = lower = upper = np.nan
+                row.update({metric + "_mean": mean, metric + "_ci_lower": lower,
+                            metric + "_ci_upper": upper})
+            if n >= 30:
+                ndcg_mean_by_group[(category, raw_group)] = row["ndcg_mean"]
+            results.append(row)
 
     # Second pass: add gap vs reference group for each category.
     for row in results:
