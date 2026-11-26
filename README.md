@@ -1,53 +1,71 @@
+![Skillens](assets/banner.svg)
+
 # Skillens
 
-**Data-Driven Personalised Educational Content Recommendation**  
-CM3070 Computer Science Final Project, University of London  
-Shahzaib Naeem  
-Project Template 1 (CM3005 Data Science), Idea 1.1
+**Hybrid content recommendation with an evaluation-focused ML pipeline.**
 
-**Repository:** https://github.com/hk1metla/CM3070-Skillens  
-**Live Demo:** https://cm370-skillens-kuxgzkqtmag6eozssjk5s6.streamlit.app/
+Skillens combines text-based retrieval, collaborative signals and weighted fusion to recommend learning content. A Streamlit interface connects model outputs with explanations and interactive exploration.
 
-> The live demo may take a short time to wake on first load because Streamlit Community Cloud hibernates inactive apps.
+**Python · scikit-learn · pandas · Streamlit · recommender systems**
 
----
+## System overview
 
-## Overview
+| Layer | Implementation |
+| --- | --- |
+| Content retrieval | TF-IDF representations and similarity-based ranking |
+| Collaborative recommendation | ItemKNN from interaction data |
+| Fusion and fallback | Weighted hybrid ranking with content-based cold-start handling |
+| Explanations | Template-based descriptions of recommendation signals |
+| Evaluation | Ranking metrics, temporal splits, ablation and robustness scripts |
+| Interface | Streamlit pages for exploration and a model control room |
 
-Skillens is a Streamlit-based educational content recommender. It combines:
+The repository also contains experimental semantic, pedagogical and learning-to-rank modules. Their presence does not mean every variant has been validated or deployed.
 
-- TF-IDF content-based recommendation
-- ItemKNN collaborative filtering
-- weighted hybrid fusion
-- template-based explanations for recommended items
+## Run locally
 
-The system is designed for sparse educational interaction data and includes a cold-start fallback when collaborative evidence is unavailable.
+Install the pinned environment from `requirements.txt`, using a compatible Python environment:
 
-The deployed app is a lightweight demonstration interface. All reported quantitative results in the final report are generated locally from the OULAD evaluation pipeline.
+```bash
+python -m pip install -r requirements.txt
+python -m streamlit run src/app/app.py
+```
 
----
+The demonstration uses its available catalog and deployment artifacts. [Open the existing Streamlit demo](https://cm370-skillens-kuxgzkqtmag6eozssjk5s6.streamlit.app/). The demo interface and offline research pipeline serve different purposes.
 
-## Main Results
+## Offline evaluation
 
-OULAD test set at K = 10:
+The canonical entry point is:
 
-| Model | NDCG@10 | Precision@10 | Recall@10 |
-|---|---:|---:|---:|
-| Popularity | 0.384 | 0.074 | 0.744 |
-| TF-IDF | 0.440 | 0.095 | 0.953 |
-| ItemKNN | 0.574 | 0.100 | 1.000 |
-| **Hybrid** | **0.703** | **0.100** | **1.000** |
+```bash
+python -m src.eval.pipeline --config configs/experiment.yaml --out results/reproduction --prepare-data
+```
 
-Hybrid outperforms the popularity baseline by 83% on NDCG@10. Statistical significance was assessed using the Wilcoxon signed-rank test with Bonferroni correction.
+Provide the required OULAD files under `data/raw/oulad/` first. Inspect `src/data/ingest.py`, `build_interactions.py` and `make_splits.py` for the exact inputs and item definitions. OULAD interactions are aggregated to module/presentation items, while the separate external course catalog supports the interface.
 
----
+**Data mode matters:** the interaction builder includes a synthetic fallback when real interaction files are unavailable. Check input provenance and generated artifacts before interpreting any metric as an OULAD result. A successful demo run is not a real-data benchmark reproduction.
 
-## Project Structure
+The split helper sorts each user's history by timestamp, with default 60/20/20 proportions. Histories shorter than three records remain in training. Evaluation should state the candidate universe, repeated-item handling, relevance definition and split coverage alongside ranking scores.
 
-```text
-src/
-├── app/       # Streamlit interface
-├── data/      # ingestion, interaction construction, temporal splits
-├── eval/      # canonical evaluation pipeline and plots
-├── explain/   # template-based explanation logic
-└── models/    # recommender models
+## Repository map
+
+| Folder | Contents |
+| --- | --- |
+| `src/models/` | Baseline, content, collaborative and experimental ranking models |
+| `src/data/` | Ingestion, interaction construction, demographic loading and split checks |
+| `src/eval/` | Metrics, canonical pipeline, fairness/robustness experiments and reporting |
+| `src/explain/` | Explanation templates and attribution experiments |
+| `src/app/` | Streamlit UI |
+| `tests/` | Metrics, schema, leakage, split and artifact checks |
+| `data/deploy/` | Artifacts used by the demonstration |
+
+## Results and verification
+
+The repository contains historical evaluation artifacts. Full training, evaluation and deployment were **not rerun during this portfolio documentation pass**. Older numerical claims are preserved with their context in [the historical README](docs/HISTORICAL_README.md); they are not presented here as newly verified results.
+
+A credible reproduction should retain input hashes, configuration, split integrity checks and a run manifest. Report performance only for the exact verified data mode and evaluation protocol.
+
+## Source and scope
+
+Developed by Shahzaib Naeem from an academic research project and maintained as an applied ML portfolio project. Source history is recorded in [PROVENANCE.md](PROVENANCE.md). Third-party datasets and libraries retain their own terms; a code release does not grant rights to redistribute external catalog content.
+
+Current research directions include stronger candidate-set evaluation, sparse-feedback robustness, transparent fallback behavior and separating recommendation usefulness from offline ranking metrics.
